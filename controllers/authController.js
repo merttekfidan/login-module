@@ -1,6 +1,12 @@
 const express = require("express");
 const bcrypt = require("bcrypt");
 const User = require("./../models/userModel");
+const testErr = (statusCode, message, req, res) => {
+  res.status(statusCode).json({
+    status: "fail",
+    message,
+  });
+};
 
 exports.signup = async (req, res) => {
   try {
@@ -16,21 +22,17 @@ exports.signup = async (req, res) => {
     console.log(err);
   }
 };
-const testErr = (statusCode, message, req, res) => {
-  res.status(statusCode).json({
-    status: "fail",
-    message,
-  });
-};
+
 exports.login = async (req, res) => {
   try {
     const { username, password } = req.body;
-    if (!username || !password) testErr(200, "HATA", req, res);
+    if (!username || !password) testErr(500, "HATA", req, res);
     const user = await User.findOne({ username }).select("+password");
-    res.status(500).json({
-      status: "fail",
-      data: user,
-    });
+    if (bcrypt.compare(req.body.password, user.password))
+      res.status(200).json({
+        status: "success",
+        data: user,
+      });
   } catch (err) {
     testErr(200, "HATA", req, res);
   }
