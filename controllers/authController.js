@@ -56,14 +56,15 @@ exports.login = async (req, res) => {
 exports.protect = async (req, res) => {
   let token;
   if (
-    req.header.authorization &&
+    req.headers.authorization &&
     req.headers.authorization.startsWith("Bearer")
   ) {
     token = req.headers.authorization.split(" ")[1];
+    console.log("asdasd");
   }
-
+  console.log(req.headers.authorization.split(" ")[1]);
   if (!token) {
-    testErr(500, "HATA", res);
+    return testErr(500, "HATA", res);
   }
   res.status(200).json({
     status: "success",
