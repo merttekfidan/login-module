@@ -2,14 +2,9 @@ const express = require("express");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const { promisify } = require("util");
+const AppError = require("./../utils/appError");
 const User = require("./../models/userModel");
 const catchAsync = require("./../utils/catchAsync");
-const testErr = (statusCode, message, res) => {
-  res.status(statusCode).json({
-    status: "fail",
-    message,
-  });
-};
 
 const signToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -28,32 +23,25 @@ const createSendToken = (user, statusCode, res) => {
     },
   });
 };
-exports.signup = async (req, res) => {
-  try {
-    const newUser = await User.create(req.body);
-    res.status(201).json({
-      status: "success",
-      data: {
-        newUser,
-      },
-    });
-  } catch (err) {
-    console.log(err);
-  }
-};
+exports.signup = catchAsync(async (req, res) => {
+  const newUser = await User.create(req.body);
+  res.status(201).json({
+    status: "success",
+    data: {
+      newUser,
+    },
+  });
+});
 
-exports.login = async (req, res) => {
-  try {
-    const { username, password } = req.body;
-    if (!username || !password) testErr(500, "HATA", res);
-    const user = await User.findOne({ username }).select("+password");
-    if (!user.correctPassword(password, user.password))
-      testErr(500, "HATA", res);
-    createSendToken(user, 200, res);
-  } catch (err) {
-    testErr(200, "HATA", res);
-  }
-};
+exports.login = catchAsync(async (req, res) => {
+  const { username, password } = req.body;
+  if (!username || !password)
+    return next(new AppError("Please provide a username and a password", 401));
+  const user = await User.findOne({ username }).select("+password");
+  if (!user.correctPassword(password, user.password))
+    return next(new AppError("Incorrect username or password", 404));
+  createSendToken(user, 200, res);
+});
 
 exports.protect = catchAsync(async (req, res, next) => {
   let token;
@@ -63,31 +51,21 @@ exports.protect = catchAsync(async (req, res, next) => {
   ) {
     token = req.headers.authorization.split(" ")[1];
   }
-  console.log(req.headers.authorization.split(" ")[1]);
+
   if (!token) {
-    return testErr(500, "HATA", res);
+    return next(new AppError("Please log in to get access this area", 401));
   }
 
   const decoded = await promisify(jwt.verify)(token, process.env.JWT_SECRET);
-  console.log(decoded);
-
   const currentUser = await User.findById(decoded.id);
-  if (!currentUser) return testErr(500, "HATA", res);
+  if (!currentUser) return next(new AppError("User not found", 404));
 
   req.user = currentUser;
   next();
-
-  res.status(200).json({
-    status: "success",
-    token,
-  });
 });
 
-exports.forgotPassword = (req, res) => {
-  res.status(500).json({
-    status: "fail",
-    data: "This function is not created yet",
-  });
+exports.forgotPassword = (req, res, next) => {
+  return next(new AppError("This route is not ready yet", 404));
 };
 exports.resetPassword = (req, res) => {
   res.status(500).json({
